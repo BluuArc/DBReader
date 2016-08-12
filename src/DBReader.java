@@ -14,14 +14,18 @@ import org.json.*;
 //source: http://theoryapp.com/parse-json-in-java/
 
 public class DBReader {
-	public static boolean debug = true;
+	public static boolean debug = false;
 
 	public static void main(String[] args) {
 		String version = "v1.0";
 		String editDate = "7/31/16";
 		printMessage("Version: " + version + "\nBuild Date: " + editDate, false);
 		
-		SimpleInput.getYesNoOption("Would you like to enable debug mode?");
+		if(SimpleInput.getYesNoOption("Would you like to enable debug mode?") == 1)
+			debug = true;
+		else
+			debug = false;
+		
 		printMessage("Debug mode is on.", true);
 		
 		printMessage("Showing options dialog box.", true);
