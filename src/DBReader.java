@@ -22,6 +22,7 @@ public class DBReader {
 		String version = "v1.0";
 		String editDate = "8/12/16";
 		printMessage("Version: " + version + "\nBuild Date: " + editDate, false);
+		printMessage("Check for updates on Github (https://github.com/BluuArc/DBReader)\n", false);
 		
 		if(SimpleInput.getYesNoOption("Would you like to enable debug mode?") == 1)
 			debug = true;
@@ -29,72 +30,74 @@ public class DBReader {
 			debug = false;
 		
 		printMessage("Debug mode is on.", true);
-		
-		printMessage("Showing options dialog box.", true);
-		Object[] options = {"Choose JSON Locally", "Download JSON", "Exit"};
-		int answer = SimpleInput.getListOption("Choose one", options);
-		
-		//choose a file
-		String file = "";
-		//choose locally
-		if(answer == 0){
-			printMessage("Choose JSON file.", false);
-			file = FileChooser.pickAFile();
-			setDirectory(file);
-		}else if(answer == 1){
-			//download file
-			//DL JSON file
-			String url = SimpleInput.getString("Enter URL of JSON file. (Cancel to choose local JSON file)");
+		while(true){
+			printMessage("Showing options dialog box.", true);
+			Object[] options = {"Choose JSON Locally", "Download JSON", "Exit"};
+			int answer = SimpleInput.getListOption("Choose one", options);
 			
-			printMessage("Choose directory to save JSON file", false);
-			file = FileChooser.pickAFile();
-			setDirectory(file);
-			
-			printMessage("Downloading JSON file.", false);
-			try{
-				file = downloadJSONFromURL(url);
-				printMessage("Finished downloading JSON file.",false);
-			} catch(IOException e){
-				printMessage("IOException from downloadJSONFromURL",false);
+			//choose a file
+			String file = "";
+			//choose locally
+			if(answer == 0){
+				printMessage("Choose JSON file.", false);
+				file = FileChooser.pickAFile();
+				setDirectory(file);
+			}else if(answer == 1){
+				//download file
+				//DL JSON file
+				String url = SimpleInput.getString("Enter URL of JSON file. (Cancel to choose local JSON file)");
+				
+				printMessage("Choose directory to save JSON file", false);
+				file = FileChooser.pickAFile();
+				setDirectory(file);
+				
+				printMessage("Downloading JSON file.", false);
+				try{
+					file = downloadJSONFromURL(url);
+					printMessage("Finished downloading JSON file.",false);
+				} catch(IOException e){
+					printMessage("IOException from downloadJSONFromURL",false);
+				}
+			}else if(answer == 2)
+				break;
+			else{
+				System.err.println("Error: Unkown input [" + answer + "]");
 			}
-		}else if(answer == 2)
-			System.exit(0);
-		else{
-			System.err.println("Error: Unkown input [" + answer + "]");
-		}
-		//end else
-		String output = FileChooser.getMediaDirectory() + 
-				"\\" + file.substring(file.lastIndexOf(File.separatorChar)+1) +"-output.tsv";
-		
-		printMessage("Output will be saved to [" + output + "]",false);
-		
-		//input file check
-		if(!file.contains(".json")){
-			printMessage("Error: [" + file.toString() + "] is not a .json file. Exiting program.",false);
-			System.exit(1);
-		}
-		
-		//output file check
-		File f = new File(output);
-		if(f.exists()){
-			if(!f.delete()){
-				System.err.println("Error: Deletion of [" + output + "] failed. Exiting program.");
+			//end else
+			String output = FileChooser.getMediaDirectory() + 
+					"\\" + file.substring(file.lastIndexOf(File.separatorChar)+1) +"-output.tsv";
+			
+			printMessage("Output will be saved to [" + output + "]",false);
+			
+			//input file check
+			if(!file.contains(".json")){
+				printMessage("Error: [" + file.toString() + "] is not a .json file. Exiting program.",false);
 				System.exit(1);
 			}
-			printMessage("Deleted old file [" + output + "]",false);
+			
+			//output file check
+			File f = new File(output);
+			if(f.exists()){
+				if(!f.delete()){
+					System.err.println("Error: Deletion of [" + output + "] failed. Exiting program.");
+					System.exit(1);
+				}
+				printMessage("Deleted old file [" + output + "]",false);
+			}
+	
+			//get keys from input
+			//ex: id,guide_id,name
+			String keys = SimpleInput.getString("Enter the keys you'd like to get values for separated by commas\n"
+					+ "Ex: id,guide_id,name for unit ID, guide ID, and unit name");
+			
+			//setParams
+			//TODO: create options box to decide type of search
+			String params = "normalSearch";//"deepSearchFind,10017,queryKey,ubb,printType";
+			printMessage("Keys are [" + keys +"]\nParams are [" + params + "]", true);
+			//read file
+			slowParse(params, file, output, keys);
 		}
-
-		//get keys from input
-		//ex: id,guide_id,name
-		String keys = SimpleInput.getString("Enter the keys you'd like to get values for separated by commas\n"
-				+ "Ex: id,guide_id,name for unit ID, guide ID, and unit name");
-		
-		//setParams
-		//TODO: create options box to decide type of search
-		String params = "normalSearch";//"deepSearchFind,10017,queryKey,ubb,printType";
-		printMessage("Keys are [" + keys +"]\nParams are [" + params + "]", true);
-		//read file
-		slowParse(params, file, output, keys);
+		printMessage("Exiting program.", false);
 		System.exit(0);
 	}//end main
 	
