@@ -1,6 +1,8 @@
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
@@ -18,7 +20,7 @@ public class DBReader {
 
 	public static void main(String[] args) {
 		String version = "v1.0";
-		String editDate = "7/31/16";
+		String editDate = "8/12/16";
 		printMessage("Version: " + version + "\nBuild Date: " + editDate, false);
 		
 		if(SimpleInput.getYesNoOption("Would you like to enable debug mode?") == 1)
@@ -115,7 +117,7 @@ public class DBReader {
 	 */
 	public static void printMessage(String s, boolean isDebug){
 		if(isDebug && debug)
-			System.out.println(s);
+			System.out.println("[DEBUG]: " + s);
 		else if (!isDebug)
 			System.out.println(s);
 	}
@@ -435,7 +437,7 @@ public class DBReader {
 	/**
 	 * Gets name of a JSON object. Also assumes that string has 1 JSON object.
 	 * 
-	 * @param input	the JSONObject as a string
+	 * @param obj	the JSONObject to get the name of
 	 * @return		the name of the JSON object
 	 */
 	public static String getObjectNameFromJSONObject(JSONObject obj){
@@ -459,7 +461,7 @@ public class DBReader {
 	 */
 	public static void slowParse(String params, String file, String outFile, String keyString){
 		//declare variables
-		Scanner sc = null;			//file reader
+		BufferedReader br = null;	//file reader
 		String line = " ";			//current line
 		String out = "{\n";			//isolated JSON object
 		boolean stillRead = false;	//flag to read lines
@@ -478,34 +480,44 @@ public class DBReader {
 		if(paramsArray.length == 0)
 			normalSearch = true;
 		for(int i = 0; i < paramsArray.length; ++i){
-			if(paramsArray[i].equals("normalSearch"))//do a normal search
+			if(paramsArray[i].equals("normalSearch")){//do a normal search
+				printMessage("normalSearch enabled", true);
 				normalSearch = true;
-			if(paramsArray[i].equals("deepSearchFirst"))//get info of first unit in list
+			}
+			if(paramsArray[i].equals("deepSearchFirst")){//get info of first unit in list
+				printMessage("deepSearch (first) enabled", true);
 				deepSearchOp = true;
+			}
 			if(paramsArray[i].equals("deepSearchFind")){//get info of unit given
+				printMessage("deepSeach (find) enabled", true);
 				deepSearchOp = true;
 				unitID = paramsArray[i+1];
 			}
-			if(paramsArray[i].equals("printType"))//print type of output in deepSearch (e.g. String, int, boolean, etc.)
+			if(paramsArray[i].equals("printType")){//print type of output in deepSearch (e.g. String, int, boolean, etc.)
+				printMessage("printType enabled", true);
 				printType = true;
-			if(paramsArray[i].equals("queryKey") && deepSearchOp) //requires deepSearch to be enabled; find specific part of unit (bb, name, etc.)
+			}
+			if(paramsArray[i].equals("queryKey") && deepSearchOp){ //requires deepSearch to be enabled; find specific part of unit (bb, name, etc.)
+				printMessage("queryKey search ready", true);
 				queryKey = paramsArray[i+1];
+			}
 		}
 		
 		//open file
 		printMessage("Opening [" + file + "]",false);
 		File f = new File(file);
-		int i = 0;
+		//int i = 0;
 		int j = 0;
 		String temp = "";
 		
 		//read file
 		try{
 			printMessage("Reading file",false);
-			sc = new Scanner(f);
-			i = 1;
+			br = new BufferedReader(new FileReader(f));
+			//i = 1;
 			//print columns
 			if(normalSearch){
+				printMessage("Adding columns to output file", true);
 				try {
 					for(j = 0; j < keys.length; ++j){
 						temp = keys[j];
@@ -520,14 +532,15 @@ public class DBReader {
 				}
 			}
 			//while not at EOF
-			while(sc.hasNextLine()){
+			while((line = br.readLine()) != null){
 				//read file
-				line = sc.nextLine();
+				//printMessage("Line is [" + line + "]",true);
 				
 				//reach very end of database JSON
 				//if at end of file and still reading into out String
-				if(line.equals("}") && !sc.hasNextLine() && stillRead){
+				if(line.equals("}") && stillRead){
 					//stop reading
+					printMessage("Reach end of database", true);
 					stillRead = false;
 					
 					//end with closing bracket
@@ -535,9 +548,11 @@ public class DBReader {
 					
 					//put string into JSON object
 					jsonUnit = new JSONObject(out);
+					printMessage("This unit is " + getObjectNameFromJSONObject(jsonUnit), true);
 					
 					if(deepSearchOp){
 						if(unitID.length() == 0 || unitID.equals(getObjectNameFromJSONObject(jsonUnit))){
+							printMessage("Attempting deepSearch on unit", true);
 							//deepSearchFirst
 							deepSearch(jsonUnit, "", 0, printType, queryKey);
 							deepSearchOp = false;
@@ -548,12 +563,14 @@ public class DBReader {
 					if(normalSearch){
 						//get unit info
 						for(j = 0; j < keys.length; ++j){
+							printMessage("Attempting to key [" + keys[j] + "] from unit", true);
 							if(j != (keys.length-1))
 								temp = "\t";
 							msg += getPropertyFromJSONObject(jsonUnit, keys[j]) + temp; 
 						}
 						
 						//append to file
+						printMessage("Appending msg to file", true);
 						try {
 							printMessage(msg, false);
 							appendToFile(outFile, msg + "\n");
@@ -566,12 +583,14 @@ public class DBReader {
 				}//end if at last bracket before EOF
 				
 				//reach unit line
-				if(line.startsWith("    \"") || line.startsWith("\t\"")){					
+				if(line.startsWith("    \"")/* || line.startsWith("\t\"")*/){					
 					if(!stillRead){
 						//begin reading
+						printMessage("Begin reading", true);
 						stillRead = true;
 					}else{
 						//stop reading
+						printMessage("Stop reading", true);
 						stillRead = false;
 						
 						//end with closing bracket
@@ -580,7 +599,10 @@ public class DBReader {
 						//put string into JSON object
 						jsonUnit = new JSONObject(out);
 						
+						printMessage("This unit is " + getObjectNameFromJSONObject(jsonUnit), true);
+						
 						if(deepSearchOp){
+							printMessage("Attempting deepSearch", true);
 							printMessage("unitID: [" + unitID + "]\t objName: [" + getObjectNameFromJSONObject(jsonUnit) + "]",true);
 							if(unitID.length() == 0 || unitID.equals(getObjectNameFromJSONObject(jsonUnit))){
 								//deepSearchFirst
@@ -593,6 +615,7 @@ public class DBReader {
 						if(normalSearch){
 							//get unit info
 							for(j = 0; j < keys.length; ++j){
+								printMessage("Attempting to key [" + keys[j] + "] from unit", true);
 								if(j != (keys.length-1))
 									temp = "\t";
 								else
@@ -601,6 +624,7 @@ public class DBReader {
 							}
 							
 							//append to file
+							printMessage("Appending msg to file", true);
 							try {
 								printMessage(msg, false);
 								appendToFile(outFile, msg + "\n");
@@ -610,17 +634,19 @@ public class DBReader {
 						}//end normalSearch
 						
 						//start over
+						printMessage("Start reading",true);
 						out = "{\n";
 						stillRead = true;
 					}//end else
 					
 					//increment for every unit
-					i++;
-					
+					//i++;
+					/*
 					//progress indicator
 					if(i%100 == 0){
 						System.out.print(".");
 					}
+					*/
 				}//end if unit line
 				
 				//add line to out string if still reading
@@ -628,17 +654,20 @@ public class DBReader {
 					out += line;
 				
 				//stop early if done searching
-				if(!normalSearch && !deepSearchOp)
+				if(!normalSearch && !deepSearchOp){
+					printMessage("Done searching", true);
 					break;
+				}
 			}//end while
 			System.out.print("Done!\n");
 			//close scanner after successfully reading file
 			//printMessage("Finished reading file");
-			sc.close();
+			br.close();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
-		} finally{
-			sc.close();
-		}//end try/catch/finally
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}//end try/catch
 	}// end slowParse method
 }//end class
